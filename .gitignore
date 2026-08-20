@@ -1,0 +1,17 @@
+# Профиль браузера с куками TikTok — доступ к аккаунту. Наружу нельзя.
+.tt-profile/
+
+# Рабочие файлы
+__pycache__/
+*.pyc
+run.log
+reposts.json
+probe_report.json
+probe2.json
+
+# Xcode (проект генерируется из project.yml)
+ios/ClearReposts.xcodeproj/
+ios/build/
+ios/Payload/
+*.ipa
+.DS_Store
