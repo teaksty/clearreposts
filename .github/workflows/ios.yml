@@ -72,3 +72,46 @@ jobs:
         with:
           name: ClearReposts-ipa
           path: ios/ClearReposts.ipa
+
+  # Сборка под SDK симулятора — её принимает Appetize.io.
+  # Это отдельный артефакт: .ipa для устройства симулятор запустить не может.
+  simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build для симулятора
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild             -project ClearReposts.xcodeproj             -scheme ClearReposts             -configuration Release             -sdk iphonesimulator             -derivedDataPath build             CODE_SIGNING_ALLOWED=NO             ONLY_ACTIVE_ARCH=NO 2>&1 | tee sim.log
+
+      - name: Только ошибки
+        if: failure()
+        working-directory: ios
+        run: |
+          echo "=============== ОШИБКИ КОМПИЛЯЦИИ ==============="
+          grep -E "error:" sim.log | sort -u | head -60 || true
+          echo "================================================="
+
+      - name: Упаковать .app
+        working-directory: ios/build/Build/Products/Release-iphonesimulator
+        run: |
+          ls -la
+          zip -qr ClearReposts-sim.zip ClearReposts.app
+          echo "архитектуры внутри:"
+          lipo -info ClearReposts.app/ClearReposts || true
+          ls -lh ClearReposts-sim.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClearReposts-simulator
+          path: ios/build/Build/Products/Release-iphonesimulator/ClearReposts-sim.zip
+
