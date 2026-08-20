@@ -180,7 +180,7 @@ struct CleanerView: View {
                     Image(systemName: icon(for: r.outcome))
                         .foregroundStyle(color(for: r.outcome))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(r.repost.author.isEmpty ? r.repost.videoID : r.repost.author)
+                        Text(r.repost.displayName.isEmpty ? r.repost.videoID : r.repost.displayName)
                             .font(.subheadline)
                         Text(r.detail)
                             .font(.caption2)

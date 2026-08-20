@@ -41,8 +41,13 @@ enum JS {
         // Запасной путь — ссылка «профиль» в шапке.
         const link = document.querySelector('[data-e2e="nav-profile"], a[href^="/@"]');
         if (link) {
-            const m = (link.getAttribute('href') || '').match(/^\/@([^/?]+)/);
-            if (m) return JSON.stringify({ ok: true, username: m[1], via: 'nav-link' });
+            // Без регулярки: обратный слеш в литерале Swift ломает сборку,
+            // а разбор ссылки вида /@nickname прекрасно делается срезами.
+            const href = link.getAttribute('href') || '';
+            if (href.charAt(0) === '/' && href.charAt(1) === '@') {
+                const nick = href.slice(2).split('/')[0].split('?')[0];
+                if (nick) return JSON.stringify({ ok: true, username: nick, via: 'nav-link' });
+            }
         }
         return JSON.stringify({ ok: false, error: 'username-not-found', e2e: diag() });
     } catch (e) {

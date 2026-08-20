@@ -27,10 +27,10 @@ final class RepostCleaner: ObservableObject {
     private var harvested: [String: Repost] = [:]
 
     // Паузы между видео. @AppStorage работает только во вью, поэтому руками.
-    @Published var minDelay: Double = Self.stored("minDelay", 2.5) {
+    @Published var minDelay: Double = RepostCleaner.stored("minDelay", 2.5) {
         didSet { UserDefaults.standard.set(minDelay, forKey: "minDelay") }
     }
-    @Published var maxDelay: Double = Self.stored("maxDelay", 5.0) {
+    @Published var maxDelay: Double = RepostCleaner.stored("maxDelay", 5.0) {
         didSet { UserDefaults.standard.set(maxDelay, forKey: "maxDelay") }
     }
 

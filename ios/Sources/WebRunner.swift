@@ -78,7 +78,7 @@ final class WebRunner: NSObject, WKNavigationDelegate {
         watchdog = Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
             guard !Task.isCancelled else { return }
-            await self?.finishNavigation(.failure(WebError.timeout))
+            self?.finishNavigation(.failure(WebError.timeout))
         }
     }
 
