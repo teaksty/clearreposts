@@ -7,16 +7,26 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
+      - name: Версии инструментов
+        run: |
+          echo "Xcode: $(xcodebuild -version | head -1)"
+          echo "путь:  $(xcode-select -p)"
+
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          brew install xcodegen
+          echo "XcodeGen: $(xcodegen --version)"
 
       - name: Generate Xcode project
         working-directory: ios
-        run: xcodegen generate
+        run: |
+          xcodegen generate
+          echo "формат проекта (objectVersion):"
+          grep -m1 objectVersion ClearReposts.xcodeproj/project.pbxproj
 
       - name: Build (unsigned)
         working-directory: ios
