@@ -101,17 +101,21 @@ jobs:
           grep -E "error:" sim.log | sort -u | head -60 || true
           echo "================================================="
 
-      - name: Упаковать .app
-        working-directory: ios/build/Build/Products/Release-iphonesimulator
+      # GitHub сам архивирует артефакт. Раскладываем .app в отдельную папку и
+      # отдаём именно её, тогда в скачанном ZIP лежит ClearReposts.app в корне —
+      # ровно то, что ждёт Appetize. Свой zip внутри создавал бы второй слой.
+      - name: Подготовить .app
+        working-directory: ios
         run: |
-          ls -la
-          zip -qr ClearReposts-sim.zip ClearReposts.app
+          mkdir -p out
+          cp -R build/Build/Products/Release-iphonesimulator/ClearReposts.app out/
           echo "архитектуры внутри:"
-          lipo -info ClearReposts.app/ClearReposts || true
-          ls -lh ClearReposts-sim.zip
+          lipo -info out/ClearReposts.app/ClearReposts || true
+          echo "содержимое out/:"
+          ls -la out/
 
       - uses: actions/upload-artifact@v4
         with:
           name: ClearReposts-simulator
-          path: ios/build/Build/Products/Release-iphonesimulator/ClearReposts-sim.zip
+          path: ios/out
 
