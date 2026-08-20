@@ -34,6 +34,11 @@ final class RepostCleaner: ObservableObject {
         didSet { UserDefaults.standard.set(maxDelay, forKey: "maxDelay") }
     }
 
+    /// Если заполнено — автоопределение аккаунта пропускается.
+    @Published var manualUsername: String = UserDefaults.standard.string(forKey: "manualUsername") ?? "" {
+        didSet { UserDefaults.standard.set(manualUsername, forKey: "manualUsername") }
+    }
+
     private static func stored(_ key: String, _ fallback: Double) -> Double {
         (UserDefaults.standard.object(forKey: key) as? Double) ?? fallback
     }
@@ -93,22 +98,39 @@ final class RepostCleaner: ObservableObject {
         }
 
         do {
-            status = "Определяю аккаунт…"
-            try await runner.load("https://www.tiktok.com/foryou")
-            try await Task.sleep(nanoseconds: 2_000_000_000)
+            let manual = manualUsername.trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+            let name: String
 
-            let who = try await runner.evalJSON(JS.whoami, as: JSWhoami.self)
-            guard who.ok, let name = who.username, !name.isEmpty else {
-                if who.error == "captcha" { blockOnCaptcha(); return }
-                diagnostics = who.e2e ?? []
-                fail("Не удалось определить аккаунт (\(who.error ?? "?")). Проверь, что вход выполнен.")
-                return
+            if !manual.isEmpty {
+                name = manual
+                status = "Аккаунт задан вручную: @\(name)"
+            } else {
+                status = "Определяю аккаунт…"
+                try await runner.load("https://www.tiktok.com/foryou")
+                // Симулятор и медленная сеть отрисовывают SPA не сразу;
+                // сам скрипт внутри опрашивает страницу ещё до 18 секунд.
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+
+                let who = try await runner.evalJSON(JS.whoami, as: JSWhoami.self)
+                guard who.ok, let found = who.username, !found.isEmpty else {
+                    if who.error == "captcha" { blockOnCaptcha(); return }
+                    diagnostics = who.e2e ?? []
+                    let page = who.pageTitle ?? "?"
+                    let url = who.pageUrl ?? "?"
+                    let len = who.bodyLen ?? -1
+                    fail("Аккаунт не определился. Страница: «\(page)», \(url), текста \(len) симв. "
+                         + "Впиши ник вручную в поле выше.")
+                    return
+                }
+                name = found
             }
+
             username = name
             status = "Аккаунт: @\(name). Открываю профиль…"
 
             try await runner.load("https://www.tiktok.com/@\(name)")
-            try await Task.sleep(nanoseconds: 2_500_000_000)
+            try await Task.sleep(nanoseconds: 5_000_000_000)
 
             status = "Собираю репосты (листаю ленту)…"
             let collected = try await runner.evalJSON(

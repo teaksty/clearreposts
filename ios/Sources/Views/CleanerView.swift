@@ -59,6 +59,15 @@ struct CleanerView: View {
 
     private var statusSection: some View {
         Section {
+            // Автоопределение ломается на медленной сети и в симуляторе,
+            // поэтому даём вписать ник руками.
+            HStack {
+                Text("@").foregroundStyle(.secondary)
+                TextField("ник (если не определился сам)", text: $cleaner.manualUsername)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .disabled(cleaner.isBusy)
+            }
             if !cleaner.username.isEmpty {
                 LabeledContent("Аккаунт", value: "@\(cleaner.username)")
             }

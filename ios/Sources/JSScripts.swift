@@ -28,31 +28,40 @@ enum JS {
     /// Кто залогинен. Основной источник — JSON гидратации, который TikTok
     /// кладёт в <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">.
     static let whoami = prelude + """
-    try {
-        if (captcha()) return JSON.stringify({ ok: false, error: 'captcha' });
-        const tag = document.getElementById('__UNIVERSAL_DATA_FOR_REHYDRATION__');
-        if (tag) {
-            const data = JSON.parse(tag.textContent);
-            const scope = data['__DEFAULT_SCOPE__'] || {};
-            const ctx = scope['webapp.app-context'] || {};
-            const uid = (ctx.user && ctx.user.uniqueId) || '';
-            if (uid) return JSON.stringify({ ok: true, username: uid, via: 'rehydration' });
-        }
-        // Запасной путь — ссылка «профиль» в шапке.
-        const link = document.querySelector('[data-e2e="nav-profile"], a[href^="/@"]');
-        if (link) {
-            // Без регулярки: обратный слеш в литерале Swift ломает сборку,
-            // а разбор ссылки вида /@nickname прекрасно делается срезами.
-            const href = link.getAttribute('href') || '';
-            if (href.charAt(0) === '/' && href.charAt(1) === '@') {
-                const nick = href.slice(2).split('/')[0].split('?')[0];
-                if (nick) return JSON.stringify({ ok: true, username: nick, via: 'nav-link' });
+    // SPA отрисовывается не мгновенно: на медленной машине (симулятор, слабый
+    // интернет) данных нет ещё несколько секунд. Поэтому опрашиваем в цикле.
+    for (let attempt = 0; attempt < 12; attempt++) {
+        try {
+            if (captcha()) return JSON.stringify({ ok: false, error: 'captcha' });
+
+            const tag = document.getElementById('__UNIVERSAL_DATA_FOR_REHYDRATION__');
+            if (tag) {
+                const data = JSON.parse(tag.textContent);
+                const scope = data['__DEFAULT_SCOPE__'] || {};
+                const ctx = scope['webapp.app-context'] || {};
+                const uid = (ctx.user && ctx.user.uniqueId) || '';
+                if (uid) return JSON.stringify({ ok: true, username: uid, via: 'rehydration' });
             }
-        }
-        return JSON.stringify({ ok: false, error: 'username-not-found', e2e: diag() });
-    } catch (e) {
-        return JSON.stringify({ ok: false, error: String(e), e2e: diag() });
+
+            const link = document.querySelector('[data-e2e="nav-profile"], a[href^="/@"]');
+            if (link) {
+                const href = link.getAttribute('href') || '';
+                if (href.charAt(0) === '/' && href.charAt(1) === '@') {
+                    const nick = href.slice(2).split('/')[0].split('?')[0];
+                    if (nick) return JSON.stringify({ ok: true, username: nick, via: 'nav-link' });
+                }
+            }
+        } catch (e) { /* пробуем ещё раз */ }
+        await sleep(1500);
     }
+    return JSON.stringify({
+        ok: false,
+        error: 'username-not-found',
+        e2e: diag(),
+        pageUrl: location.href,
+        pageTitle: document.title,
+        bodyLen: (document.body ? document.body.innerText.length : 0)
+    });
     """
 
     /// Переключиться на вкладку репостов, домотать до конца, собрать ссылки.
@@ -182,6 +191,9 @@ struct JSWhoami: Decodable {
     let username: String?
     let error: String?
     let e2e: [String]?
+    let pageUrl: String?
+    let pageTitle: String?
+    let bodyLen: Int?
 }
 
 struct JSCollect: Decodable {
