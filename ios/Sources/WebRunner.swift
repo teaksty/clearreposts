@@ -26,7 +26,7 @@ final class WebRunner: NSObject, WKNavigationDelegate {
 
     let webView: WKWebView
     /// Сюда прилетает сырой JSON каждого ответа /api/repost/item_list/.
-    var onFeedJSON: ((String) -> Void)?
+    var onFeedJSON: (@MainActor (String) -> Void)?
 
     private var navContinuation: CheckedContinuation<Void, Error>?
     private var watchdog: Task<Void, Never>?

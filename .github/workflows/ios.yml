@@ -21,6 +21,7 @@ jobs:
       - name: Build (unsigned)
         working-directory: ios
         run: |
+          set -o pipefail
           xcodebuild \
             -project ClearReposts.xcodeproj \
             -scheme ClearReposts \
@@ -30,7 +31,24 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO
+            ONLY_ACTIVE_ARCH=NO 2>&1 | tee build.log
+
+      # Вывод xcodebuild огромен; при падении печатаем только ошибки,
+      # чтобы их можно было скопировать из хвоста лога.
+      - name: Только ошибки
+        if: failure()
+        working-directory: ios
+        run: |
+          echo "=============== ОШИБКИ КОМПИЛЯЦИИ ==============="
+          grep -E "error:" build.log | sort -u | head -60 || true
+          echo "================================================="
+
+      - name: Полный лог артефактом
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ios/build.log
 
       - name: Package .ipa
         working-directory: ios

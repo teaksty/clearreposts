@@ -58,11 +58,14 @@ final class LoginModel: ObservableObject {
 
     func check(_ onLoggedIn: @escaping () -> Void) async {
         if await WebRunner.isLoggedIn() {
+            poller?.cancel()
             onLoggedIn()
         } else {
             note = "Сессия ещё не появилась — заверши вход и попробуй снова"
         }
     }
 
-    deinit { poller?.cancel() }
+    /// deinit намеренно нет: из nonisolated-деинициализатора нельзя трогать
+    /// свойства @MainActor-класса. Опрос гасит себя сам при успешном входе.
+    func stopPolling() { poller?.cancel() }
 }
